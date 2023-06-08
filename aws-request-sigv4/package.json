@@ -1,0 +1,17 @@
+{
+  "name": "aws-request-sigv4",
+  "version": "0.1.0",
+  "description": "Request signature v4 utils",
+  "main": "index.ts",
+  "scripts": {},
+  "author": "Miguel Henriques",
+  "license": "MIT",
+  "devDependencies": {
+    "@aws-crypto/sha256-js": "^4.0.0",
+    "@aws-lambda-powertools/logger": "^1.8.0",
+    "@aws-sdk/credential-provider-node": "^3.348.0",
+    "@aws-sdk/credential-providers": "^3.348.0",
+    "@aws-sdk/protocol-http": "^3.347.0",
+    "@aws-sdk/signature-v4": "^3.347.0"
+  }
+}
