@@ -1,9 +1,5 @@
 # reference-samples
 
-A list of samples that can be used to accelerate your AWS-native projects
+A collection of samples from professional and personal projects I consider or have considered at point in time, to be potential reusable artifacts.
 
-All AWS SDK dependencies are excluded from as developer dependencies.
-
-List of available samples:
-
-- [aws-request-sigv4](./aws-request-sigv4/): authenticate your requests to AWS API's (supports AppSync and API Gateway)
+These samples are not production-ready samples that can be used to scaffold, accelerate or as simple refernces when building similar solutions.
