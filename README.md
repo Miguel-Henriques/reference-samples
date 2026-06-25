@@ -1,5 +1,5 @@
 # reference-samples
 
-A collection of samples from professional and personal projects I consider or have considered at point in time, to be potential reusable artifacts.
+An opinionated collection of reference samples I've developed throughout my career to scaffold and/or as reference when building projects.
 
-These samples are not production-ready samples that can be used to scaffold, accelerate or as simple refernces when building similar solutions.
+> **Important**: none of this work should be considered production-ready or necessarily up to date with the latest standards thus use it at your own risk.

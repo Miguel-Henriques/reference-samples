@@ -1,0 +1,54 @@
+name: Release
+
+# Trigger on push to `main`
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          registry-url: 'https://npm.pkg.github.com'
+          # scope: '@your-org' (if applicable)
+
+      - name: Install dependencies
+        run: npm clean-install
+
+      - name: Unit tests
+        run: npm run test:run
+
+      - name: Release
+        env:
+          # Authentication Token to publish to GitHub and the npm registry (GitHub Packages).
+          #
+          # The workflow authenticates with the GitHub Actions built-in `secrets.GITHUB_TOKEN`
+          # as long as it has the `packages: write` permission.
+          #
+          # You must have a permissive role in the repository to modify these settings.
+          #
+          # Disclaimer:
+          # Despite configured to **GitHub Packages** (`npm.pkg.github.com`), the
+          # processes described here can be replicated to any other target NPM registry.
+          #
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
