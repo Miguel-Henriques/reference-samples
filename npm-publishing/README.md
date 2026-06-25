@@ -187,7 +187,7 @@ commits since the last tag:
 
 ### GitHub Enterprise
 
-When your repositories are hosted on GitHub Enterprise, the NPM registry uses the following domain: `npm.your-org.ghe.com`
+When your repositories are hosted on GitHub Enterprise, the NPM registry uses this domain instead: `npm.your-org.ghe.com`
 
 ### Motivation
 
@@ -202,10 +202,10 @@ The first and most sounding for me was always time. Maintaining a specific packa
 I wanted something simpler and less mentally taxing. Instead of,
 
 ```sh
-git commit -m "
-git tag
+git commit -m "this is a fix"
+git tag 0.1.1
 git push --tags
-(Go to GitHub -> Publish Package/Run Workflow)
+# (Go to GitHub -> Publish Package/Run Workflow)
 ```
 
 Why can't we just:
