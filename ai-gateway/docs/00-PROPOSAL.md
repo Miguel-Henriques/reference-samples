@@ -1,5 +1,16 @@
 # AI Gateway Initial Proposal
 
+## Contents
+
+- [1. Intro](#1-intro)
+- [2. Approach](#2-approach)
+- [3. Requirements](#3-requirements)
+- [4. High-Level Design](#4-high-level-design)
+  - [4.1. LiteLLM (Core)](#41-litellm-core)
+  - [4.2. Authorizer](#42-authorizer)
+- [5. Design Alternatives](#5-design-alternatives)
+- [6. Out of scope](#6-out-of-scope)
+
 ## 1. Intro
 
 An AI gateway is essential infrastructure component for companies of all sizes that run multiple LLM-powered applications. These applications typically have common non-functional requirements such as the ability to run different models, track user spending and enforcing budgets. Without a common gateway, each team must either build its own implementation—duplicating effort and often producing several incomplete solutions—or invest in a centralized, well-designed solution that is generic and expressive enough to support every current and future application in the team's or organization's catalog.
@@ -27,7 +38,9 @@ The following are nice-to-have capabilities but not grounds for immediate exclus
 
 - Guardrails
 - WebSocket transport - OpenAI popularized it as an efficient alternative to
-  SSE, particularly for high-volume conversations.
+  SSE, particularly for high-volume conversations. It is deferred because
+  HTTP and SSE cover the required flows. The ALB-based architecture supports
+  adding WebSocket pass-through later.
 - JWT authentication
 - Credential load balancing - Distributes traffic across available
   provider keys using real-time metrics, load-balancing algorithms and other
@@ -36,6 +49,19 @@ The following are nice-to-have capabilities but not grounds for immediate exclus
 ## 4. High-Level Design
 
 ![High-level AI gateway architecture](assets/00-proposal-high-level-arch.png)
+
+A request moves through the gateway as follows:
+
+1. The **client** sends its request and JWT to the public gateway ALB.
+2. The **gateway ALB** forwards the request to the authorizer.
+3. The **authorizer** validates the JWT, evaluates permissions against Amazon Verified Permissions, and applies pre-flight guardrails.
+4. The authorizer exchanges the validated identity for a short-lived LiteLLM
+   virtual key and forwards the request.
+5. **LiteLLM** applies its routing and guardrails, records spend against the
+   user and team budgets, and calls the selected **model provider**.
+6. The response returns to the client through the same path.
+
+LiteLLM remains the source of truth for spend, budgets, and model routing.
 
 ### 4.1. LiteLLM (Core)
 
@@ -55,6 +81,15 @@ for production deployments on EKS and ECS.
 > **Fit:** native
 
 LiteLLM supports multi-tenant architectures across organizations, teams, departments, and customers while maintaining appropriate isolation between tenants. The OSS version does not support organizations, so teams form its highest hierarchy level, though this shouldn't be a problem for most startups and medium-size scale-ups.
+
+Team membership is optional. When the configured JWT team claim is present,
+the gateway attributes the LiteLLM virtual key to both the user and team.
+Without the claim, it attributes the key only to the user, allowing solo
+developers to use the gateway without a synthetic team.
+
+Administrators provision teams so budgets and model allowlists remain under
+their control. The gateway never creates teams from token claims and rejects
+unknown team identifiers with `403 team_not_provisioned`.
 
 #### Authentication
 
@@ -89,6 +124,11 @@ LiteLLM provides pre-built Terraform modules that simplify deployment, breaking 
 
 > **Fit:** native
 
+LiteLLM-native guardrails configured through `proxy_config` are the primary
+mechanism. The authorizer retains a pluggable pre-flight `Guardrail` interface
+for checks that must run before LiteLLM, with no pre-flight guardrails
+registered by default.
+
 #### Client integrations
 
 LiteLLM exposes OpenAI-compatible HTTP endpoints from which teams can generate client SDKs in their preferred programming languages by using tools such as Speakeasy, Stainless, or Fern.
@@ -99,9 +139,28 @@ The authorizer runs as a discrete process that validates and authorizes each req
 
 1. Extracts the `Authorization` request header to identify and validate the caller (expects a valid JWT)
 2. Checks the decoded identity and request details against Amazon Verified Permissions to determine whether the caller can perform the request
-3. Passes the request through applicable guardrails (placeholder, to be expanded later)
+3. Passes the request through any registered pre-flight guardrails
 4. Maps the caller's JWT to one or more virtual keys for authenticated LiteLLM requests
 5. Sends the request to LiteLLM with the mapped virtual keys
+
+#### Identity and authentication
+
+The gateway accepts JWTs from an external, standards-compliant OIDC issuer.
+
+Gateway owners configure the issuer and audience through `OIDC_ISSUER_URL` and
+`OIDC_AUDIENCE`; the authorizer loads signing keys through OIDC discovery.
+
+The gateway does not provision any Idp (such as Amazon Cognito) or assume responsibility for user lifecycle management.
+
+#### Authorization
+
+The authorizer verifies JWTs locally with `jose`, constructs the principal and
+related entities from validated claims, and calls Amazon Verified Permissions
+`IsAuthorized`.
+
+Alternatively, we can validate the JWT and authorize the request in a single remote call to Amazon Verified Permissions using `IsAuthorizedWithToken` against a configured AVP OIDC identity source - useful if policies reference specific token claims.
+
+Both options are valid. First option keeps token validation and claim mapping explicit and is the only choice if you need to trust multiple IdPs.
 
 **Note:** Introducing another service fragments authorization responsibilities
 between the custom authorizer (JWTs and application-level checks) and LiteLLM
@@ -153,3 +212,4 @@ project's scope:
 - Automatic fallbacks
 - Automatic retries
 - Prompt management
+- WebSocket transport
