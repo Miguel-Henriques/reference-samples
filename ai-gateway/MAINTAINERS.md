@@ -15,6 +15,7 @@ rationale live in [00-PROPOSAL.md](00-PROPOSAL.md) and
 - [First deployment](#first-deployment)
 - [Authorizer releases](#authorizer-releases)
 - [Day-two operations](#day-two-operations)
+- [Model management](#model-management)
 - [Security and credentials](#security-and-credentials)
 - [Production-ready Security Checklist](#production-ready-security-checklist)
 - [Troubleshooting](#troubleshooting)
@@ -84,9 +85,13 @@ Set `allow_plaintext_alb = true` only for a development sandbox. Production
 requires certificates for both ALBs and restricted
 `authorizer_allowed_ingress_cidrs`.
 
-`proxy_config` becomes LiteLLM's `config.yaml` and controls models, routing,
-and native guardrails. Provider keys must come from Secrets Manager, never
-from `terraform.tfvars`. The root stack does not currently expose the
+`proxy_config` becomes LiteLLM's optional `config.yaml`. Use it for routing,
+native guardrails, and an initial or immutable base model set. Runtime model
+management is enabled by default, so `proxy_config` can remain empty. See
+[Model management](#model-management) for the production workflow.
+
+Provider keys in a static `proxy_config` must come from Secrets Manager,
+never from `terraform.tfvars`. The root stack does not currently expose the
 upstream module's `gateway_extra_secrets` input; wire an explicit root
 variable and module argument in `infra/main.tf` before using environment
 references such as `os.environ/ANTHROPIC_API_KEY`.
@@ -161,10 +166,12 @@ aws ecs update-service \
 
 ### Models and guardrails
 
-Change models, routing, and LiteLLM-native guardrails through `proxy_config`
-and apply Terraform. For a check that must run before LiteLLM, implement the
-[`Guardrail`](../authorizer/src/guardrails/index.ts) interface and register
-it in `authorizer/src/index.ts`.
+Manage production models and provider credentials at runtime through the
+LiteLLM Admin UI or management API. Reserve `proxy_config` for static base
+models, routing, and LiteLLM-native guardrails. For a check that must run
+before LiteLLM, implement the
+[`Guardrail`](../authorizer/src/guardrails/index.ts) interface and register it
+in `authorizer/src/index.ts`.
 
 ### Users, teams, and budgets
 
@@ -177,6 +184,42 @@ the claim.
 Blocking a user is the revocation mechanism. Deleting a virtual key is only
 temporary because the next valid request mints a replacement. See
 [ADR 04](04-virtual-key-lifecycle.md) for rotation and cleanup behavior.
+
+## Model management
+
+The upstream AWS module enables `STORE_MODEL_IN_DB=true` by default. Models
+created through the LiteLLM Admin UI or management API are therefore stored
+in Aurora and survive task replacements, restarts, and scaling events.
+
+Start with `proxy_config.model_list` when a fixed bootstrap set is useful,
+then move day-two model operations to the database. Database-backed models
+can be added, edited, tested, or removed without a Terraform apply or
+LiteLLM task restart. Provider credentials can also be created once and
+reused across models.
+
+Static and database-backed models can coexist. Static models remain owned by
+`config.yaml`: change them through `proxy_config` and apply Terraform, which
+creates a new task definition and rolling deployment. They cannot be edited
+or deleted through the Admin UI. For production, prefer database-backed
+models unless a model must remain coupled to infrastructure deployment.
+
+Use these management API endpoints with the LiteLLM master key:
+
+- `POST /model/new`
+- `GET /model/info`
+- `POST /model/update`
+- `POST /model/delete`
+
+See the
+[LiteLLM model management guide](https://docs.litellm.ai/docs/proxy/model_management)
+for request bodies, reusable credentials, and Admin UI operations.
+
+Database-stored provider credentials are encrypted using
+`LITELLM_SALT_KEY`, or `LITELLM_MASTER_KEY` when no salt key is configured.
+Do not change the encryption key after credentials have been stored, because
+LiteLLM cannot decrypt them with a different value. The root stack does not
+currently expose a dedicated salt-key secret, so account for this before
+adopting database-managed provider credentials in production.
 
 ### Authorization policies
 
