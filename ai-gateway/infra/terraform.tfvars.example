@@ -1,0 +1,32 @@
+# Copy to terraform.tfvars and adjust.
+
+region = "eu-central-1"
+azs    = ["eu-central-1a", "eu-central-1b"]
+tenant = "your-org" # Boundary can be your org, team, project, etc.
+env    = "dev"
+
+# --- TLS (dev shortcut shown; use ACM certificates for production workloads) ---
+allow_plaintext_alb = true
+# litellm_acm_certificate_arn    = "arn:aws:acm:eu-central-1:123456789012:certificate/..."
+# authorizer_acm_certificate_arn = "arn:aws:acm:eu-central-1:123456789012:certificate/..."
+
+# --- OIDC issuer that signs caller JWTs ---
+oidc_issuer_url = "https://your-idp.example.com"
+oidc_audience   = "ai-gateway"
+# oidc_team_claim = "team_id"
+
+# --- LiteLLM models (rendered into config.yaml) ---
+proxy_config = {
+  model_list = [
+    {
+      model_name = "claude-sonnet"
+      litellm_params = {
+        model   = "anthropic/claude-sonnet-5"
+        api_key = "os.environ/ANTHROPIC_API_KEY"
+      }
+    }
+  ]
+}
+
+# --- Cost controls ---
+# default_user_max_budget_usd = 25
