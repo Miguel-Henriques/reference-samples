@@ -1,0 +1,8 @@
+domain_name                      = "example.com"
+region                           = "us-east-1"
+include_wildcard                 = true
+wait_for_certificate_validation  = false
+
+tags = {
+  environment = "shared"
+}
