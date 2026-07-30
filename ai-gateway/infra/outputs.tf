@@ -13,6 +13,11 @@ output "avp_policy_store_id" {
   value       = module.authorizer.avp_policy_store_id
 }
 
+output "avp_namespace" {
+  description = "Cedar namespace from the AVP schema (set as AVP_NAMESPACE on the authorizer)."
+  value       = module.authorizer.avp_namespace
+}
+
 output "litellm_admin_url" {
   description = "Interior LiteLLM ALB (management API + UI). Not for client traffic."
   value       = module.litellm.alb_url

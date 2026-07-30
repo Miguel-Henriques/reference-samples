@@ -3,7 +3,8 @@ provider "aws" {
 
   default_tags {
     tags = {
-      project = "ai-gateway"
+      project    = "ai-gateway"
+      managed_by = "terraform"
     }
   }
 }

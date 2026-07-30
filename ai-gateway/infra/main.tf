@@ -49,8 +49,8 @@ module "authorizer" {
   desired_count = var.authorizer_desired_count
 
   oidc_issuer_url = var.oidc_issuer_url
-  oidc_audience   = var.oidc_audience
   oidc_jwks_url   = var.oidc_jwks_url
+  oidc_role_claim = var.oidc_role_claim
   oidc_team_claim = var.oidc_team_claim
 
   virtual_key_duration        = var.virtual_key_duration

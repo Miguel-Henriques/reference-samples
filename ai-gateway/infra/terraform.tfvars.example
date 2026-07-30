@@ -12,7 +12,7 @@ allow_plaintext_alb = true
 
 # --- OIDC issuer that signs caller JWTs ---
 oidc_issuer_url = "https://your-idp.example.com"
-oidc_audience   = "ai-gateway"
+# oidc_role_claim = "role"
 # oidc_team_claim = "team_id"
 
 # --- Optional static LiteLLM config.yaml bootstrap ---

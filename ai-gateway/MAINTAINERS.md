@@ -31,24 +31,24 @@ and [ADR 04](04-virtual-key-lifecycle.md) for virtual-key behavior.
 
 Resource names use the `<tenant>-litellm-<env>` prefix.
 
-| Terraform output | Use |
-| --- | --- |
-| `gateway_url` | Public endpoint provided to clients |
-| `authorizer_ecr_repository_url` | Authorizer image repository |
-| `avp_policy_store_id` | Verified Permissions policy store |
-| `litellm_admin_url` | LiteLLM UI and management API |
-| `litellm_master_key_secret_arn` | Master-key secret |
-| `litellm_db_bootstrap_sql` | One-time database user bootstrap |
-| `litellm_migration_run_command` | LiteLLM migration command |
+| Terraform output                | Use                                 |
+| ------------------------------- | ----------------------------------- |
+| `gateway_url`                   | Public endpoint provided to clients |
+| `authorizer_ecr_repository_url` | Authorizer image repository         |
+| `avp_policy_store_id`           | Verified Permissions policy store   |
+| `litellm_admin_url`             | LiteLLM UI and management API       |
+| `litellm_master_key_secret_arn` | Master-key secret                   |
+| `litellm_db_bootstrap_sql`      | One-time database user bootstrap    |
+| `litellm_migration_run_command` | LiteLLM migration command           |
 
 ## Repository layout
 
-| Path | Contents |
-| --- | --- |
-| `authorizer/` | TypeScript authorizer service |
-| `infra/` | Root Terraform stack |
-| `infra/modules/authorizer/` | ALB, ECS, ECR, IAM, AVP, and Redis |
-| `docs/` | Proposal, ADRs, and operating guides |
+| Path                        | Contents                             |
+| --------------------------- | ------------------------------------ |
+| `authorizer/`               | TypeScript authorizer service        |
+| `infra/`                    | Root Terraform stack                 |
+| `infra/modules/authorizer/` | ALB, ECS, ECR, IAM, AVP, and Redis   |
+| `docs/`                     | Proposal, ADRs, and operating guides |
 
 ## Prerequisites and local development
 
@@ -70,16 +70,16 @@ Copy `infra/terraform.tfvars.example` to the ignored
 `infra/terraform.tfvars`. Do not commit credentials or real environment
 values.
 
-| Input group | Root variables |
-| --- | --- |
-| Location and naming | `region`, `azs`, `tenant`, `env` |
-| TLS | `litellm_acm_certificate_arn`, `authorizer_acm_certificate_arn`, `allow_plaintext_alb` |
-| LiteLLM | `proxy_config`, `ui_password` |
-| OIDC | `oidc_issuer_url`, `oidc_audience`, `oidc_jwks_url`, `oidc_team_claim` |
-| Authorizer release | `authorizer_image_tag`, `authorizer_cpu`, `authorizer_memory`, `authorizer_desired_count` |
-| Network | `authorizer_allowed_ingress_cidrs` |
-| Virtual keys | `virtual_key_duration`, `key_cache_ttl_seconds`, `authorizer_enable_redis_cache` |
-| Cost controls | `default_user_max_budget_usd` |
+| Input group         | Root variables                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------- |
+| Location and naming | `region`, `azs`, `tenant`, `env`                                                          |
+| TLS                 | `litellm_acm_certificate_arn`, `authorizer_acm_certificate_arn`, `allow_plaintext_alb`    |
+| LiteLLM             | `proxy_config`, `ui_password`                                                             |
+| OIDC                | `oidc_issuer_url`, `oidc_audience`, `oidc_jwks_url`, `oidc_team_claim`                    |
+| Authorizer release  | `authorizer_image_tag`, `authorizer_cpu`, `authorizer_memory`, `authorizer_desired_count` |
+| Network             | `authorizer_allowed_ingress_cidrs`                                                        |
+| Virtual keys        | `virtual_key_duration`, `key_cache_ttl_seconds`, `authorizer_enable_redis_cache`          |
+| Cost controls       | `default_user_max_budget_usd`                                                             |
 
 Set `allow_plaintext_alb = true` only for a development sandbox. Production
 requires certificates for both ALBs and restricted
@@ -293,89 +293,56 @@ Record any exception with an owner, compensating control, and expiry date.
 ### Network and transport
 
 - [ ] Provision or import valid ACM certificates whose names match every
-  internet-accessible hostname. Attach them to the public ALB HTTPS
-  listeners so HTTP API and SSE traffic uses `https://` and WebSocket
-  traffic uses `wss://`.
+      internet-accessible hostname. Attach them to the public ALB HTTPS
+      listeners so HTTP API and SSE traffic uses `https://` and WebSocket
+      traffic uses `wss://`.
 - [ ] Set `allow_plaintext_alb = false`, use the TLS 1.2/1.3 listener policy,
-  and verify that no public listener serves application traffic over HTTP.
+      and verify that no public listener serves application traffic over HTTP.
 - [ ] Implement [ADR 03](docs/03-internal-alb-lockdown.md): make the LiteLLM
-  ALB internal and limit its security group to the authorizer and approved
-  administrative paths.
+      ALB internal and limit its security group to the authorizer and approved
+      administrative paths.
 - [ ] Keep ECS tasks, Aurora, Redis, and the jump instance in private
-  subnets without public IP addresses or direct internet ingress.
+      subnets without public IP addresses or direct internet ingress.
 - [ ] Access the LiteLLM Admin UI and management APIs only through the
-  SSM-managed jump instance. Give it no public IP, inbound security-group
-  rules, or SSH key, and restrict `ssm:StartSession` with least-privilege
-  IAM.
-- [ ] Record Session Manager API activity in CloudTrail and review access
-  regularly. Port-forwarded session content cannot be logged, so treat
-  `ssm:StartSession` permission as privileged access.
-- [ ] Restrict `authorizer_allowed_ingress_cidrs` where callers have known
-  egress ranges. Otherwise, protect the public ALB with AWS WAF rate limits
-  and managed rules.
-- [ ] Review and limit outbound access where practical. Use VPC endpoints
-  for supported AWS services and a controlled egress path if
-  provider-domain restrictions are required.
+      SSM-managed jump instance. Give it no public IP, inbound security-group
+      rules, or SSH key, and restrict `ssm:StartSession` with least-privilege
+      IAM.
 
 ### Identity, authorization, and secrets
 
 - [ ] Validate OIDC issuer, audience, signature, and expiry for every request.
-  Use short-lived JWTs and test key rotation and invalid-token rejection.
+      Use short-lived JWTs and test key rotation and invalid-token rejection.
 - [ ] Replace the permissive starter Verified Permissions policy with
-  least-privilege Cedar policies managed by Terraform. Test cross-user,
-  cross-team, model, method, and path denial cases.
+      least-privilege Cedar policies managed by Terraform. Test cross-user,
+      cross-team, model, method, and path denial cases.
 - [ ] Store the LiteLLM master key, UI password, and provider credentials in
-  Secrets Manager. Never place plaintext credentials in Terraform variables,
-  state, container images, source control, or logs.
+      Secrets Manager. Never place plaintext credentials in Terraform variables,
+      state, container images, source control, or logs.
 - [ ] Set a dedicated, unique LiteLLM UI password; do not fall back to the
-  master key. Rotate both credentials on a defined schedule and redeploy all
-  tasks that consume them.
-- [ ] Keep virtual-key lifetimes short, keep the cache TTL shorter than the
-  key lifetime, and verify revocation by blocking a user.
-- [ ] Apply least-privilege IAM to ECS task, execution, deployment, and
-  operator roles. Require MFA for privileged human access.
+      master key. Rotate both credentials on a defined schedule and redeploy all
+      tasks that consume them.
 
 ### Data protection and abuse controls
 
-- [ ] Verify encryption at rest for Aurora, Redis, Secrets Manager, log
-  groups, and backups with approved KMS keys where required.
 - [ ] Configure per-user and per-team budgets, model allowlists, request rate
-  limits, token limits, and concurrency limits. Alert before hard limits are
-  reached.
+      limits, token limits, and concurrency limits. Alert before hard limits are
+      reached.
 - [ ] Configure guardrails for sensitive-data handling and prohibited
-  content. Confirm prompts, completions, authorization headers, and keys are
-  not logged unless explicitly approved under the data-retention policy.
-- [ ] Define Aurora backup retention and point-in-time recovery, then test a
-  restore. Document recovery objectives and deletion-protection exceptions.
-
-### Detection, response, and software supply chain
-
-- [ ] Enable ALB access logs, application audit logs, CloudTrail, GuardDuty,
-  and Security Hub or approved equivalents. Centralize logs with retention,
-  encryption, restricted access, and alerts for authentication failures,
-  unusual spend, elevated error rates, and administrative changes.
-- [ ] Use immutable authorizer image tags, scan container images and
-  dependencies, patch critical vulnerabilities, and review the full
-  Terraform plan before each production release.
-- [ ] Run production smoke tests covering TLS, OIDC, authorization denials,
-  LiteLLM isolation, guardrails, budgets, streaming, dependency failure, and
-  secret rotation.
-- [ ] Maintain an incident-response runbook for credential compromise,
-  unauthorized model use, data exposure, and spend anomalies. Test key
-  rotation, user blocking, traffic containment, and rollback procedures.
+      content. Confirm prompts, completions, authorization headers, and keys are
+      not logged unless explicitly approved under the data-retention policy.
 
 ## Troubleshooting
 
-| Symptom | Check |
-| --- | --- |
-| Authorizer tasks cannot start | Confirm the configured image tag exists in `authorizer_ecr_repository_url` |
-| `401 invalid_token` | Check issuer, audience, token expiry, discovery, and the optional JWKS override |
-| `403 permission_denied` | Inspect the AVP policy and the request's user, team, model, method, and path |
-| `403 team_not_provisioned` | Create the LiteLLM team or correct the JWT team claim |
-| `400 guardrail_rejected` | Inspect the named pre-flight guardrail and request payload |
-| `502 upstream_error` | Check interior ALB reachability, LiteLLM health, and the injected master key |
-| Healthy `/healthz` but requests fail | Check OIDC, AVP, Redis, and LiteLLM separately |
-| First plan cannot resolve VPC data | Apply `module.litellm` first |
+| Symptom                              | Check                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------- |
+| Authorizer tasks cannot start        | Confirm the configured image tag exists in `authorizer_ecr_repository_url`      |
+| `401 invalid_token`                  | Check issuer, audience, token expiry, discovery, and the optional JWKS override |
+| `403 permission_denied`              | Inspect the AVP policy and the request's user, team, model, method, and path    |
+| `403 team_not_provisioned`           | Create the LiteLLM team or correct the JWT team claim                           |
+| `400 guardrail_rejected`             | Inspect the named pre-flight guardrail and request payload                      |
+| `502 upstream_error`                 | Check interior ALB reachability, LiteLLM health, and the injected master key    |
+| Healthy `/healthz` but requests fail | Check OIDC, AVP, Redis, and LiteLLM separately                                  |
+| First plan cannot resolve VPC data   | Apply `module.litellm` first                                                    |
 
 Start with the authorizer CloudWatch log group and the LiteLLM ECS service
 logs. Do not infer dependency health from `/healthz`.

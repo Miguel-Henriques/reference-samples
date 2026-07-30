@@ -41,7 +41,7 @@ variable "allow_plaintext_alb" {
 # ---------- LiteLLM core ----------
 
 variable "proxy_config" {
-  description = "LiteLLM config.yaml contents (model_list, guardrails, router settings...)."
+  description = "(Optional) LiteLLM config.yaml contents (model_list, guardrails, router settings...)."
   type        = any
   default     = {}
 }
@@ -53,15 +53,16 @@ variable "oidc_issuer_url" {
   type        = string
 }
 
-variable "oidc_audience" {
-  description = "Required audience (aud claim) on caller JWTs."
-  type        = string
-}
-
 variable "oidc_jwks_url" {
-  description = "Optional JWKS URL override. Empty = resolved via OIDC discovery."
+  description = "(Optional) JWKS URL override. Empty = resolved via OIDC discovery."
   type        = string
   default     = ""
+}
+
+variable "oidc_role_claim" {
+  description = "JWT claim carrying the caller's authorization role."
+  type        = string
+  default     = "role"
 }
 
 variable "oidc_team_claim" {
