@@ -14,7 +14,7 @@ module "litellm" {
 }
 
 module "authorizer" {
-  source = "./modules/authorizer"
+  source = "./authorizer"
 
   # The authorizer discovers the LiteLLM VPC/subnets/ALB via tag-based data
   # sources, so it must never be planned before the core module exists. On a
