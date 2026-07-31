@@ -1,11 +1,3 @@
-resource "random_password" "ui_password" {
-  length      = 32
-  special     = false
-  min_lower   = 4
-  min_upper   = 4
-  min_numeric = 4
-}
-
 module "litellm" {
   source  = "BerriAI/litellm/aws"
   version = "~> 1.89"
@@ -18,8 +10,7 @@ module "litellm" {
   acm_certificate_arn = var.litellm_acm_certificate_arn
   allow_plaintext_alb = var.allow_plaintext_alb
   proxy_config        = var.proxy_config
-  # stored under the following name format: <tenant>-litellm-<env>-ui-password
-  ui_password = random_password.ui_password.result
+  # ui_password = random_password.ui_password.result
 }
 
 module "authorizer" {

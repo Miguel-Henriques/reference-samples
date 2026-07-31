@@ -1,0 +1,61 @@
+{
+	"AI": {
+		"entityTypes": {
+			"User": {
+				"shape": {
+					"type": "Record",
+					"attributes": {
+						"role": {
+							"type": "String"
+						}
+					}
+				}
+			},
+			"Model": {
+				"shape": {
+					"type": "Record",
+					"attributes": {}
+				}
+			},
+			"Gateway": {
+				"shape": {
+					"type": "Record",
+					"attributes": {}
+				}
+			}
+		},
+		"actions": {
+			"InvokeModel": {
+				"appliesTo": {
+					"principalTypes": [
+						"User"
+					],
+					"resourceTypes": [
+						"Model"
+					],
+					"context": {
+						"type": "Record",
+						"attributes": {
+							"path": {
+								"type": "String"
+							},
+							"method": {
+								"type": "String"
+							}
+						}
+					}
+				}
+			},
+			"ListModels": {
+				"appliesTo": {
+					"principalTypes": [
+						"User"
+					],
+					"resourceTypes": [
+						"Gateway"
+					]
+				}
+			}
+		}
+	}
+}

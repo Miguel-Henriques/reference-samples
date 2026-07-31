@@ -1,0 +1,18 @@
+{
+	"name": "Allow invoke model",
+	"description": "All callers can invoke this model.",
+	"linked": [
+		{
+			"link_id": "InvokeModel_Gemini_3_1_Flash_Lite",
+			"args": {
+				"?resource": "AI::Model::\"gemini-3.1-flash-lite\""
+			}
+		},
+		{
+			"link_id": "InvokeModel_Gemini_3_5_Flash_Lite",
+			"args": {
+				"?resource": "AI::Model::\"gemini-3.5-flash-lite\""
+			}
+		}
+	]
+}

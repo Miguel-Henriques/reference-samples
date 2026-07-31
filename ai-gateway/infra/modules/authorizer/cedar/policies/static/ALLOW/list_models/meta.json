@@ -1,0 +1,4 @@
+{
+	"name": "Allow list models",
+	"description": "All callers can retrieve the list of available models."
+}

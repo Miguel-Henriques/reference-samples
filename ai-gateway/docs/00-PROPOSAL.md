@@ -103,8 +103,9 @@ JWT-based auth for OIDC identities, and consequently JWT -> Virtual Key mapping,
 
 > **Fit:** native
 
-LiteLLM provides multiple load-balancing algorithms and an experimental
-automatic-routing feature that selects models based on request complexity.
+LiteLLM provides multiple load-balancing algorithms and an experimental automatic-routing feature that selects models based on request complexity.
+
+If needed though, you can implement an auto routing mechanism yourself, doing a first pass of the request through a classification step to determine the most effective model in terms of cost to performance ratio.
 
 #### Authorization
 
@@ -199,7 +200,35 @@ less flexibility than simpler container orchestration services such as ECS - EKS
 Excluded Cloudflare AI Gateway, Vercel AI Gateway, and OpenRouter because
 they do not meet the open-source requirement.
 
----
+### vs custom AI SDK
+
+Initially when I built my first AI integration layer I decided to opt-in for an in-process integration in the form of an SDK.
+
+The main reason behind this was the lower entry barrier and significantly lower effort of maintaining an SDK vs building and maintaining an entire service - no infrastructure concerns regarding deployment, scalability, etc. as that responsibility shifts over to the service utilizing the SDK. Furthermore, because this was an internal SDK, the trust model is inherently stronger, i.e. you trust SDK users will typically be good actors so you don't need to immediatelly prioritize building additional controls to prevent misuse.
+
+#### Where it falls short
+
+As time went by the limitations of using an SDK as the entrypoint for LLMs invocations became clearer:
+
+- Enforcing budgets, authorization and other controls requires a remote service layer that can't be tampered with
+
+  Budget and authorization controls are easy to bypass: simply patch `node_modules`, and you can do whatever you want. Strict controls require, at a minimum, a small service layer that implements controls clients cannot modify.
+
+  Tuning these controls through an SDK also ties changes to the package installation cycle, which is not ideal when you have tens of applications and need to swiftly modify guardrails, update authorization rules, etc.
+
+- Recording aggregated metrics is not efficient
+
+  Over time, it makes sense to aggregate usage metrics by user, organization, and other dimensions. When you have ten apps, doing this at the SDK level is no longer reliable. The SDK can publish metrics to a remote store, but at that point you are effectively allowing scope creep, building a service layer without acknowledging it.
+
+- Client-scoped load balancing produces an unfair request distribution
+
+  You need a centralised service to distribute requests fairly across credentials. With an SDK, each caller runs an isolated load-balancing process that doesn't account for requests from other callers.
+
+#### What the SDK does well
+
+You can build client SDKs for your mostly used programming languages to simplify the integration of the AI Gateway into your applications.
+
+Commonly nice to have features include: type bindings, error handling, retries and client-side caching.
 
 ## 6. Out of scope
 
