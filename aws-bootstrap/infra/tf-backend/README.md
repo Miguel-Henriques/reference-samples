@@ -1,45 +1,68 @@
-# Terraform Remote Backend Bootstrap Module
+# AWS Bootstrap - Terraform Remote Backend
 
-Bootstraps a Terraform Remote Backend for a service module.
-A service module refers to one or more resources that should be managed and deployed together, e.g. Frontend, Backend.
+S3 backend bootstrap utility built-in with a clean separation of statefiles across projects and for modules within the same project.
+
+## Terminology
+
+| Term    | Meaning                                                                                           |
+| ------- | ------------------------------------------------------------------------------------------------- |
+| Account | AWS account that owns the backend. The bucket name is prefixed with the account ID.               |
+| Project | Boundary for one backend bucket: `{account_id}-{project}-tf-backend`.                             |
+| Module  | Service deployed together (for example `frontend` or `backend`). State key is `modules/{module}`. |
+
+One bucket per project. One state file per module. Re-run the script for each new module; the bucket is reused if it already exists.
 
 ## Usage
 
-#### 1. Provision infrastructure for Terraform Remote Backend
+### 1. Bootstrap the backend
 
-```bash
-$ sh bootstrap.sh
+Requires AWS CLI, Terraform `~> 1.14`, and credentials that can create S3.
+
+```shell
+cd aws-bootstrap/infra/tf-backend
+./bootstrap.sh my-app frontend eu-west-1
 ```
 
-The script produces:
-- A terraform backend configuration file you can copy/paste to your target project to load the correct Terraform backend.
+Arguments: `project`, `module`, and optional `region` (default `eu-west-1`).
 
-#### 2. Commit backend.tf to version control
+### 2. Copy the config into the target project
 
-Typically it's a good idea to commit the `backend.tf` together with the respective `terraform.tfvars` to your project's repository to store a complete deployment environment configuration that everyone in your team can use.
-
-#### 3. Init Backend on your repository
-
-After adding the configuration file to your repository, you can initialize the backend using
+The script writes `.out/config.tfbackend`. Copy it next to an empty S3 backend block, for example `environments/dev/config.tfbackend`, and commit that file.
 
 ```hcl
-$ terraform init -backend-config="./environments/dev/config.tfbackend"
+terraform {
+  backend "s3" {}
+}
+```
+
+### 3. Initialize the backend
+
+```shell
+terraform init -backend-config="./environments/dev/config.tfbackend"
 ```
 
 ## FAQ
 
 #### What does this module create ?
 
-This module transparently handles the process of creating the necessary infrastructure to store terraform state files remotely and outputs the Terraform Backend Configuration file (backend.tf) you should use to deploy your infrastructure.
+- S3 bucket `{account_id}-{project}-tf-backend` with versioning, AES256
+  encryption, public access blocked, and `force_destroy = false`
+- Native S3 lockfile (`use_lockfile = true`); no DynamoDB table
+- Backend config at `.out/config.tfbackend` with key `modules/{module}`
 
-If that infrastructure already exists, i.e. you are working on a new module in a pre-configured deployment environment, then no additional resources are provisioned and just the backend.tf file is returned.
+If that infrastructure already exists, i.e. you are working on a new module in a
+pre-configured deployment environment, then no additional resources are
+provisioned and just the `config.tfbackend` file is returned.
 
 #### Can I split my resources across multiple terraform backends ?
 
-We have made this module intentionally opinionated to promote a standardization of we manage infra.
-You should adhere to this definition as much as possible.
+This module is intentionally opinionated to standardize how we manage infra.
+One bucket per project, one state file per module. Adhere to that definition
+as much as possible.
 
 #### Why is bootstrap infrastructure state not kept in version control ?
 
-//TODO: If you lose it, you lose a backup recovery mechanism. Prevent accidental deletion in CI/CD
-
+Bootstrap Terraform state is discarded after apply. Recreate is driven by
+whether the bucket already exists, not by saved state. The bucket itself is
+the source of truth: versioning and `force_destroy = false` protect it from
+accidental deletion.
